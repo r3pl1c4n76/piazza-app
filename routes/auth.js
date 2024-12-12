@@ -36,12 +36,47 @@ router.post(
             // Save new User to database
             await user.save();
 
-            // Confirm successful save
+            // Confirm successful save of new user
             res.status(201).json({message: 'User registered successfully'});
         }
 
+        // Report unsucessful save or error
         catch (error) {
             res.status(500).json({error: 'Error registering user'});
+        }
+    }
+);
+
+// Login endpoint
+router.post(
+    '/login',
+    [
+        check('email', 'Valaid email is required'). isEmail(),
+        check('password', 'Password is required').exists()
+    ],
+    async (req, res) => {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({errors: errors.array()});
+        }
+        const {email, password} = req.body;
+
+        try {
+            const user = await User.findOne({email});
+            if (!user) {
+                return res.status(400).json({error: 'Invalid credentials'});
+            }
+
+            const isMatch = await bcrypt.compare(password, user.pasword);
+            if (!isMatch) {
+                return res.status(400).json({ertotr: 'Invalid username and/or password'});
+            }
+        const token = jwt.sign({id: user._id}, 'your_jwt_secret', {expiresIn: '1h'});
+
+        res.status(200).json({token});
+        }
+        catch (error) {
+            res.status(500).json({error: 'Error logging in'});
         }
     }
 );
