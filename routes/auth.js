@@ -51,32 +51,49 @@ router.post(
 router.post(
     '/login',
     [
-        check('email', 'Valaid email is required'). isEmail(),
+        // Validate input for username and password
+        check('email', 'Valid email is required'). isEmail(),
         check('password', 'Password is required').exists()
     ],
+    // Validate login credentials
     async (req, res) => {
         const errors = validationResult(req);
+        // Report input errors if present
         if (!errors.isEmpty()) {
             return res.status(400).json({errors: errors.array()});
         }
+
+        // Extract username and password
         const {email, password} = req.body;
 
+        // Check database for combined username and password
         try {
+            // Check database for presence of username
             const user = await User.findOne({email});
+            // Report if username is not present
             if (!user) {
-                return res.status(400).json({error: 'Invalid credentials'});
+                return res.status(400).json({error: 'Invalid email'});
             }
-
+            // If username present, check password matches stored hashed password
             const isMatch = await bcrypt.compare(password, user.pasword);
+            // Report if password does not match
             if (!isMatch) {
-                return res.status(400).json({ertotr: 'Invalid username and/or password'});
+                return res.status(400).json({ertotr: 'Invalid password'});
             }
+        
+        // If username and pasword validated, generate JWT token with user ID
         const token = jwt.sign({id: user._id}, 'your_jwt_secret', {expiresIn: '1h'});
 
+        // Return JWT token
         res.status(200).json({token});
         }
+
+        // If login credentials invalid, report error
         catch (error) {
             res.status(500).json({error: 'Error logging in'});
         }
     }
 );
+
+// Export registration and login router for use
+module.exports = router;
