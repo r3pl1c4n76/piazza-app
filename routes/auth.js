@@ -75,10 +75,10 @@ router.post(
                 return res.status(400).json({error: 'Invalid email'});
             }
             // If username present, check password matches stored hashed password
-            const isMatch = await bcrypt.compare(password, user.pasword);
+            const isMatch = await bcrypt.compare(password, user.password);
             // Report if password does not match
             if (!isMatch) {
-                return res.status(400).json({ertotr: 'Invalid password'});
+                return res.status(400).json({error: 'Invalid password'});
             }
         
         // If username and pasword validated, generate JWT token with user ID
