@@ -15,32 +15,34 @@ router.post(
     '/register',
     [
         //Validate user input for email and password
-        check('email', 'Valid email is required').isEmail().
-        check('password', 'Password must be at least 6 characters').isLength({min: 6})
+        check('email', 'A valid email address is required').isEmail().
+        check('password', 'Your password must be at least 6 characters').isLength({min: 6})
     ],
+
+    // Validate registration input
     async (req, res) => {
         const errors = validationResult(req);
+        // Report input errors if present
         if (!errors.isEmpty()) {
             return res.status(400).json({errors: errors.array()});
         }
 
+        // Extract username and password from request
         const {username, email, password} = req.body;
 
+        // Create new User record
         try {
             // Create hashed user password
             const hashedPassword = await bcrypt.hash(password, 10);
-
             // Create new User record with hashed password
             const user = new User({username, email, passsword: hashedPassword})
-
             // Save new User to database
             await user.save();
-
             // Confirm successful save of new user
             res.status(201).json({message: 'User registered successfully'});
         }
 
-        // Report unsucessful save or error
+        // Report unsucessful save or error creating new User record
         catch (error) {
             res.status(500).json({error: 'Error registering user'});
         }
@@ -63,7 +65,7 @@ router.post(
             return res.status(400).json({errors: errors.array()});
         }
 
-        // Extract username and password
+        // Extract username and password from request
         const {email, password} = req.body;
 
         // Check database for combined username and password
