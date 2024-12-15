@@ -32,7 +32,7 @@ const PostSchema = new mongoose.Schema({
     ]
 });
 
-// Middleware to update status based on expirationTime
+// Update post status based on expirationTime
 PostSchema.pre('save', function (next) {
     if (new Date() > this.expirationTime) {
         this.status = 'Expired';
