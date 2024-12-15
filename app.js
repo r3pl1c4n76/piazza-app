@@ -6,7 +6,7 @@ const bodyParser = require('body-parser');
 const authRoutes = require('./routes/auth');
 
 // Database connection
-mongoose.connect('mongodb://localhost:27017/piazza')
+mongoose.connect('mongodb://127.0.0.1:27017/piazza')
     .then(() => console.log('Connected to database'))
     .catch(err => console.log('Error connecting to database:', err));
 
@@ -24,6 +24,6 @@ app.use(bodyParser.json());
 app.use('/api/auth', authRoutes);
 
 // Start server
-app.listen(3000, () => {
+app.listen(3000, '0.0.0.0', () => {
     console.log('Server is running on port 3000');
 });
