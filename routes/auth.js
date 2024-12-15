@@ -14,7 +14,8 @@ const router = express.Router();
 router.post(
     '/register',
     [
-        //Validate user input for email and password
+        //Validate user input for username, email and password
+        check('username', 'Username is required').exists(),
         check('email', 'A valid email address is required').isEmail(),
         check('password', 'Your password must be at least 6 characters').isLength({min: 6})
     ],
@@ -53,9 +54,8 @@ router.post(
 router.post(
     '/login',
     [
-        // Validate input for username, email and password
+        // Validate input for username and password
         check('username', 'Username is required').exists(),
-        check('email', 'Valid email is required').isEmail(),
         check('password', 'Password is required').exists()
     ],
     // Validate login credentials
@@ -67,15 +67,15 @@ router.post(
         }
 
         // Extract username and password from request
-        const {email, password} = req.body;
+        const {username, password} = req.body;
 
         // Check database for combined username and password
         try {
             // Check database for presence of username
-            const user = await User.findOne({email});
+            const user = await User.findOne({username});
             // Report if username is not present
             if (!user) {
-                return res.status(400).json({error: 'Invalid email'});
+                return res.status(400).json({error: 'Invalid username'});
             }
             // If username present, check password matches stored hashed password
             const isMatch = await bcrypt.compare(password, user.password);
@@ -86,9 +86,8 @@ router.post(
         
         // If username and pasword validated, generate JWT token with user ID
         const token = jwt.sign({id: user._id}, 'your_jwt_secret', {expiresIn: '1h'});
-
         // Return JWT token
-        res.status(200).json({token});
+        res.status(200).json({message: 'Login successful', token});
         }
 
         // If login credentials invalid, report error
