@@ -85,7 +85,7 @@ router.post(
             }
         
         // If username and pasword validated, generate JWT token with user ID
-        const token = jwt.sign({id: user._id}, 'your_jwt_secret', {expiresIn: '1h'});
+        const token = jwt.sign({id: user._id, username: user.username}, 'your_jwt_secret', {expiresIn: '1h'});
         // Return JWT token
         res.status(200).json({message: 'Login successful', token});
         }
@@ -109,15 +109,17 @@ const authenticatedUser = (req, res, next) => {
     try {
         // Verify user token
         const decoded = jwt.verify(token, 'your_jwt_secret');
+        console.log("Decoded token:", decoded);
         // Attach extracted user information to request
         req.user = decoded;
         next();
     }
     // Report error if user token not valid
     catch (error) {
-        res.status(400).json({error: 'Sesion expired. Please login to continue'});
+        console.error("Error verifying token:", error.message);
+        res.status(401).json({error: 'Session expired. Please login to continue'});
     }
 };
 
 // Export registration and login router for use
-module.exports = router, authenticatedUser;
+module.exports = {router, authenticatedUser};

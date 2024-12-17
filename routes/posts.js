@@ -1,12 +1,31 @@
-const express = required('express');
+// Import libraries
+const express = require('express');
 const Post = require('../models/Post');
-const router = express.Route();
+const {authenticatedUser} = require('./auth');
 
-// Create a new post
-router.post('/create', async (req, res) => {
+// Create router object to define routes
+const router = express.Router();
+
+// Create a new post (authentication required)
+router.post('/create', authenticatedUser, async (req, res) => {
     try {
+        console.log("Request body: ", req.body); // Debugging
+        console.log("Authenticated user: ", req.user); // Debugging
+        // Extract post info from user input and username from token
+        const{title, topics, body, expirationTime} = req.body;
+
+        if (!title || !topics || !body || !expirationTime) {
+            return res.status(400).json({ error: "Missing required fields" });
+        } // Debugging
+
         // Create new post
-        const post = new Post(req.body);
+        const post = new Post({
+            title,
+            topics,
+            body,
+            expirationTime,
+            owner: req.user.username
+        });
         // Save new post to database
         await post.save();
         // Confirm successful save of new post

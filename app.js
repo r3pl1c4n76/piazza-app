@@ -4,7 +4,7 @@ const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
 
 // Import routes
-const authRoutes = require('./routes/auth');
+const {router: authRoutes, authenticatedUser} = require('./routes/auth');
 const postRoutes = require('./routes/posts');
 
 // Initialise app
@@ -27,7 +27,7 @@ app.get('/', (req, res) => {
 // Authentication
 app.use('/api/auth', authRoutes);
 // Posts
-aopp.use('/api/posts', postRoutes);
+app.use('/api/posts', postRoutes);
 
 // Start server
 app.listen(3000, '0.0.0.0', () => {
