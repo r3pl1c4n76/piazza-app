@@ -2,13 +2,13 @@
 const express = require ('express');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const { check, validationResult } = require('express-validator');
-
-// Import User model to interact with MongoDB
-const User = require('../models/User');
+const {check, validationResult} = require('express-validator');
 
 // Create router object to define routes
 const router = express.Router();
+
+// Import User model to interact with MongoDB
+const User = require('../models/User');
 
 // Registration endpoint
 router.post(
@@ -97,5 +97,27 @@ router.post(
     }
 );
 
+// Middleware to authenticate user for posts and interactions
+const authenticatedUser = (req, res, next) => {
+    // Extract JWT token from request header
+    const token = req.header('Authorization')?.split(' ')[1];
+    // Report error if user token not present
+    if (!token) {
+        return res.status(401).json({error: 'You are not logged in. Please login to continue'});
+    }
+    
+    try {
+        // Verify user token
+        const decoded = jwt.verify(token, 'your_jwt_secret');
+        // Attach extracted user information to request
+        req.user = decoded;
+        next();
+    }
+    // Report error if user token not valid
+    catch (error) {
+        res.status(400).json({error: 'Sesion expired. Please login to continue'});
+    }
+};
+
 // Export registration and login router for use
-module.exports = router;
+module.exports = router, authenticatedUser;
