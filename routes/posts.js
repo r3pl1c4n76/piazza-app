@@ -37,7 +37,7 @@ router.post('/create', authenticatedUser, async (req, res) => {
 });
 
 // Retrieve all posts
-router.get('/all', async (req, res) => {
+router.get('/all', authenticatedUser, async (req, res) => {
     try {
         // Find all posts
         const posts = await Post.find();
@@ -46,6 +46,19 @@ router.get('/all', async (req, res) => {
     }
     catch (error) {
         res.status(500).json({error: 'Error retrieving posts'});
+    }
+});
+
+// Retrieve single post by ID
+router.get('/:id', authenticatedUser, async (req, res) => {
+    try {
+        // Find post by ID
+        const post = await Post.findById(req.params.id);
+        // Confirm successful retrieval
+        res.status(200).json(post);
+    }
+    catch (error) {
+        res.status(500).json({error: 'Error retrieving post'});
     }
 });
 
