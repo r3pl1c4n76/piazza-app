@@ -1,0 +1,22 @@
+// Import Post model
+const Post = require('../models/Post');
+
+// Check if post exists
+const verifyPostID = async (req, res, next) => {
+    try {
+        // Find post by ID
+        const post = await Post.findById(req.params.id);
+        // Report post doesn't exist
+        if (!post) {
+            return res.status(404).json({error: "Post not found, invalid ID"});
+        }
+        // Attach post to the request for further use
+        req.post = post;
+        next();
+    } catch (error) {
+        res.status(500).json({error: "Error locating post"});
+    }
+};
+
+// Export post ID verification for use
+module.exports = verifyPostID;

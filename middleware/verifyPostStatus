@@ -1,0 +1,9 @@
+// Check whether post status is 'Expired'
+const verifyPostStatus = (req, res, next) => {
+    if (req.post.status === 'Expired') {
+        return res.status(403).json({error: "Post has expired and cannot be interacted with"});
+    }
+    next();
+};
+
+module.exports = verifyPostStatus;
