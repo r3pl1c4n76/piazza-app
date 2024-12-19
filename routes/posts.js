@@ -16,14 +16,6 @@ const router = express.Router();
 // Set middleware for authentication users for all interactions
 router.use(authenticateUser);
 
-///////////////////////////////////// 5. Prevent post owner interactions
-const preventOwnerInteract = (req, res, next) => {
-    if (req.post.owner === req.user.username) {
-        return res.status(403).json({ error: "Post owner cannot like or dislike their own post" });
-    }
-    next();
-};
-
 // Create a new post
 router.post('/create', validatePostCreate, async (req, res) => {
     try {
@@ -59,6 +51,7 @@ router.put('/:id', verifyPostID, validatePostUpdate, verifyPostOwner, async (req
         // Confirm successful update of post
         res.status(200).json({message: 'Post updated successfully', updatedPost});
     }
+    // Report error if post update fails
     catch (error) {
         res.status(500).json({error: 'Error updating post'});
     }
@@ -72,6 +65,7 @@ router.delete('/:id', verifyPostID, verifyPostOwner, async (req, res) => {
         // Confirm successful deletion of post
         res.status(200).json({message: 'Post deleted successfully'});
     }
+    // Report error if post deletion fails
     catch (error) {
         res.status(500).json({error: 'Error deleting post'});
     }
@@ -105,11 +99,61 @@ router.get('/:id', async (req, res) => {
     }
 });
 
-// Like a post
+// Like a post - prevent post owner interaction
+router.post('/:id/like', verifyPostID, verifyPostStatus, async (req, res) => {
+    try {
+        // Get post ID from request
+        const post = req.post;
+        // Prevent post owner from liking their own post
+        if (post.owner === req.user.username) {
+            return res.status(403).json({ error: 'Post owner cannot like their own post' });
+        }
+        // Increment likes count
+        req.post.likes += 1;
+        await req.post.save();
+        // Confirm successful like
+        res.status(200).json({ message: 'Post liked successfully', post: req.post });
+    } 
+    // Report error if post like fails
+    catch (error) {
+        res.status(500).json({ error: 'Error liking post' });
+    }
+});
 
 // Dislike a post
+router.post('/:id/dislike', verifyPostID, verifyPostStatus, async (req, res) => {
+    try {
+        // Get post ID from request
+        const post = req.post;
+        // Prevent post owner from disliking their own post
+        if (post.owner === req.user.username) {
+            return res.status(403).json({ error: 'Post owner cannot dislike their own post' });
+        }
+        // Increment dislikes count
+        req.post.dislikes += 1;
+        await req.post.save();
+        // Confirm successful dislike
+        res.status(200).json({ message: 'Post disliked successfully', post: req.post });
+    } 
+    // Report error if post dislike fails
+    catch (error) {
+        res.status(500).json({ error: 'Error disliking post' });
+    }
+});
 
 // Comment on a post
-
+router.post('/:id/comment', verifyPostID, verifyPostStatus, async (req, res) => {
+    try {
+        const { comment } = req.body;
+        if (!comment) {
+            return res.status(400).json({ error: 'Comment cannot be empty' });
+        }
+        req.post.comments.push({ user: req.user.username, comment });
+        await req.post.save();
+        res.status(201).json({ message: 'Comment added successfully', post: req.post });
+    } catch (error) {
+        res.status(500).json({ error: 'Error adding comment' });
+    }
+});
 
 module.exports = router;
