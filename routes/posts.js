@@ -6,8 +6,11 @@ const {authenticatedUser} = require('./auth');
 // Create router object to define routes
 const router = express.Router();
 
-// Create a new post (authentication required)
-router.post('/create', authenticatedUser, async (req, res) => {
+// Middleware to authenticate user for all post interactions
+router.use(authenticatedUser);
+
+// Create a new post
+router.post('/create', async (req, res) => {
     try {
         console.log("Request body: ", req.body); // Debugging
         console.log("Authenticated user: ", req.user); // Debugging
@@ -36,8 +39,33 @@ router.post('/create', authenticatedUser, async (req, res) => {
     }
 });
 
+// Update post by ID
+router.put('/:id', async (req, res) => {
+    const {title, topics, body, expirationTime} = req.body;
+    // Check for missing and non-empty fields
+    if (title === "" || topics === "" || body === "" || expirationTime === "") {
+        return res.status(400).json({error: 'Fields must not be empty'});
+    }
+    try {
+        const updatedPost = await Post.findByIdAndUpdate(
+            req.params.id,
+            {title, topics, body, expirationTime},
+            {new: true}
+        );
+        if (!updatedPost) {
+            return res.status(404).json({error: 'Post not found'});
+        }
+        res.status(200).json({message: 'Post updated successfully', updatedPost});
+    }
+    catch (error) {
+        res.status(500).json({error: 'Error updating post'});
+    }
+});
+
+// Delete post by ID
+
 // Retrieve all posts
-router.get('/all', authenticatedUser, async (req, res) => {
+router.get('/all', async (req, res) => {
     try {
         // Find all posts
         const posts = await Post.find();
@@ -50,10 +78,12 @@ router.get('/all', authenticatedUser, async (req, res) => {
 });
 
 // Retrieve single post by ID
-router.get('/:id', authenticatedUser, async (req, res) => {
+router.get('/:id', async (req, res) => {
     try {
         // Find post by ID
         const post = await Post.findById(req.params.id);
+        // If post not found, return error
+        if (!post) return res.status(404).json({ error: 'Post not found' });
         // Confirm successful retrieval
         res.status(200).json(post);
     }
@@ -61,5 +91,12 @@ router.get('/:id', authenticatedUser, async (req, res) => {
         res.status(500).json({error: 'Error retrieving post'});
     }
 });
+
+// Like a post
+
+// Dislike a post
+
+// Comment on a post
+
 
 module.exports = router;
