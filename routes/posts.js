@@ -41,7 +41,8 @@ router.post('/create', validatePostCreate, async (req, res) => {
     }
 });
 
-// Update post by ID - post owner only, validate content
+// 1. Interact with post
+// 1.1 Update post by ID - post owner only, validate content
 router.put('/:id', verifyPostID, validatePostUpdate, verifyPostOwner, async (req, res) => {
     // Extract post info from user input
     const {title, topics, body, expirationTime} = req.body;
@@ -58,7 +59,7 @@ router.put('/:id', verifyPostID, validatePostUpdate, verifyPostOwner, async (req
     }
 });
 
-// Delete post by ID - post owner only
+// 1.2 Delete post by ID - post owner only
 router.delete('/:id', verifyPostID, verifyPostOwner, async (req, res) => {
     try {
         // Delete post
@@ -72,35 +73,7 @@ router.delete('/:id', verifyPostID, verifyPostOwner, async (req, res) => {
     }
 });
 
-// Retrieve all posts
-router.get('/all', async (req, res) => {
-    try {
-        // Find all posts
-        const posts = await Post.find();
-        // Confirm successful retrieval
-        res.status(200).json(posts);
-    }
-    catch (error) {
-        res.status(500).json({error: 'Error retrieving posts'});
-    }
-});
-
-// Retrieve single post by ID
-router.get('/:id', async (req, res) => {
-    try {
-        // Find post by ID
-        const post = await Post.findById(req.params.id);
-        // If post not found, return error
-        if (!post) return res.status(404).json({ error: 'Post not found' });
-        // Confirm successful retrieval
-        res.status(200).json(post);
-    }
-    catch (error) {
-        res.status(500).json({error: 'Error retrieving post'});
-    }
-});
-
-// Like a post - prevent post owner interaction
+// 1.3 Like a post - prevent post owner interaction
 router.post('/:id/like', verifyPostID, verifyPostStatus, async (req, res) => {
     try {
         // Get post ID from request
@@ -132,7 +105,7 @@ router.post('/:id/like', verifyPostID, verifyPostStatus, async (req, res) => {
     }
 });
 
-// Dislike a post
+// 1.4 Dislike a post
 router.post('/:id/dislike', verifyPostID, verifyPostStatus, async (req, res) => {
     try {
         // Get post ID from request
@@ -165,7 +138,7 @@ router.post('/:id/dislike', verifyPostID, verifyPostStatus, async (req, res) => 
     }
 });
 
-// Comment on a post
+// 1.5 Comment on a post
 router.post('/:id/comment', verifyPostID, verifyPostStatus, async (req, res) => {
     try {
         const {comment} = req.body;
@@ -184,5 +157,82 @@ router.post('/:id/comment', verifyPostID, verifyPostStatus, async (req, res) => 
         res.status(500).json({error: 'Error adding comment'});
     }
 });
+
+// 1.6 Retrieve all comments for a post
+router.get('/:id/comments', verifyPostID, async (req, res) => {
+    try {
+        const post = req.post;
+        // Check if post has comments
+        if (!post.comments || post.comments.length === 0) {
+            return res.status(404).json({ error: 'This post has no comments' });
+        }
+        res.status(200).json({message: "Comments: ", comments: post.comments});
+    } catch (error) {
+        res.status(500).json({error: 'Error retrieving comments'});
+    }
+});
+
+// 2. Retrieve posts
+// 2.1 Retrieve all posts
+router.get('/all', async (req, res) => {
+    try {
+        // Find all posts
+        const posts = await Post.find();
+        // Confirm successful retrieval
+        res.status(200).json(posts);
+    }
+    catch (error) {
+        res.status(500).json({error: 'Error retrieving posts'});
+    }
+});
+
+// 2.2 Retrieve single post by ID
+router.get('/:id', async (req, res) => {
+    try {
+        // Find post by ID
+        const post = await Post.findById(req.params.id);
+        // If post not found, return error
+        if (!post) return res.status(404).json({ error: 'Post not found' });
+        // Confirm successful retrieval
+        res.status(200).json(post);
+    }
+    catch (error) {
+        res.status(500).json({error: 'Error retrieving post'});
+    }
+});
+
+// 2.3 Retrieve all posts by user
+
+// 2.4 Retrieve posts with most interactions by topic
+router.get('/popular/:topic', async (req, res) => {
+    try {
+        const {topic} = req.params;
+        // Validate the topic
+        if (!['Politics', 'Health', 'Sport', 'Tech'].includes(topic)) {
+            return res.status(400).json({ error: 'Invalid topic. Choose from Politics, Health, Sport, or Tech.' });
+        }
+        // Retrieve post with most interactions for topic
+        const mostPopularPost = await Post.find({topics: topic})
+            // Sort posts based on total interactions
+            .sort({$add: ["$likes", "$dislikes", "$comments"]})
+            // Show top 5 posts
+            .limit(5);
+        // Return error if no posts found for topic
+        if (!mostPopularPost.length) {
+            return res.status(404).json({error: `No posts found for topic: ${topic}`});
+        }
+        // Confirm successful retrieval
+        res.status(200).json({
+            message: `Most popular posts for topic: ${topic}`,
+            post: mostPopularPost[0],
+        });
+    } 
+    // Report error if post retrieval fails
+    catch (error) {
+        res.status(500).json({error: 'Error retrieving the most popular posts'});
+    }
+});
+
+// 2.5 Retrieve expired posts with most interactions by topic
 
 module.exports = router;
