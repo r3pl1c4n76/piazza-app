@@ -204,7 +204,7 @@ router.get('/:id', async (req, res) => {
 // 2.3 Retrieve all posts by user
 
 // 2.4 Retrieve posts with most interactions by topic
-router.get('/popular/:topic', async (req, res) => {
+router.get('/:topic/popular/live', async (req, res) => {
     try {
         const {topic} = req.params;
         // Validate the topic
@@ -212,14 +212,14 @@ router.get('/popular/:topic', async (req, res) => {
             return res.status(400).json({ error: 'Invalid topic. Choose from Politics, Health, Sport, or Tech.' });
         }
         // Retrieve post with most interactions for topic
-        const mostPopularPost = await Post.find({topics: topic})
+        const mostPopularPost = await Post.find({topics: topic, status: 'Live'})
             // Sort posts based on total interactions
             .sort({$add: ["$likes", "$dislikes", "$comments"]})
             // Show top 5 posts
             .limit(5);
         // Return error if no posts found for topic
         if (!mostPopularPost.length) {
-            return res.status(404).json({error: `No posts found for topic: ${topic}`});
+            return res.status(404).json({error: `No live posts found for topic: ${topic}`});
         }
         // Confirm successful retrieval
         res.status(200).json({
@@ -234,5 +234,33 @@ router.get('/popular/:topic', async (req, res) => {
 });
 
 // 2.5 Retrieve expired posts with most interactions by topic
+router.get('/:topic/popular/expired', async (req, res) => {
+    try {
+        const {topic} = req.params;
+        // Validate the topic
+        if (!['Politics', 'Health', 'Sport', 'Tech'].includes(topic)) {
+            return res.status(400).json({ error: 'Invalid topic. Choose from Politics, Health, Sport, or Tech.' });
+        }
+        // Retrieve post with most interactions for topic
+        const mostPopularPost = await Post.find({topics: topic, status: 'Expired'})
+            // Sort posts based on total interactions
+            .sort({$add: ["$likes", "$dislikes", "$comments"]})
+            // Show top 5 posts
+            .limit(5);
+        // Return error if no posts found for topic
+        if (!mostPopularPost.length) {
+            return res.status(404).json({error: `No expired posts found for topic: ${topic}`});
+        }
+        // Confirm successful retrieval
+        res.status(200).json({
+            message: `Most popular posts for topic: ${topic}`,
+            post: mostPopularPost[0],
+        });
+    } 
+    // Report error if post retrieval fails
+    catch (error) {
+        res.status(500).json({error: 'Error retrieving the most popular posts'});
+    }
+});
 
 module.exports = router;
