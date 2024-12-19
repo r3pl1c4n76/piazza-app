@@ -1,0 +1,35 @@
+// Import Post model
+const Post = require('../models/Post');
+
+// Validate user input for post creation
+const validateCreatePost = (req, res, next) => {
+    // Retrieve fields from request body
+    const { title, topics, body, expirationTime } = req.body;
+    // Initialise error array
+    const errors = [];
+    // Retrieve enum values for topics from the Post schema
+    const allowedTopics = Post.schema.path('topics').caster.enumValues;
+    // Validate user input for all fields
+    if (!title || !title.trim()) {
+        errors.push('Title cannot be empty');
+    }
+    if (!topics || !Array.isArray(topics) || topics.length === 0) {
+        errors.push('At least one topic is required');
+    } else if (!topics.every(topic => allowedTopics.includes(topic))) {
+        errors.push(`Permitted topics are ${allowedTopics.join(', ')}`);
+    }
+    if (!body || !body.trim()) {
+        errors.push('Post content cannot be empty');
+    }
+    if (!expirationTime || !expirationTime.trim()) {
+        errors.push('Expiration time must be specified');
+    }
+    // Return errors if any
+    if (errors.length > 0) {
+        return res.status(400).json({ errors });
+    }
+    next();
+};
+
+// Export post creation validation for use
+module.exports = validateCreatePost;

@@ -97,29 +97,5 @@ router.post(
     }
 );
 
-// Middleware to authenticate user for posts and interactions
-const authenticatedUser = (req, res, next) => {
-    // Extract JWT token from request header
-    const token = req.header('Authorization')?.split(' ')[1];
-    // Report error if user token not present
-    if (!token) {
-        return res.status(401).json({error: 'You are not logged in. Please login to continue'});
-    }
-    
-    try {
-        // Verify user token
-        const decoded = jwt.verify(token, 'your_jwt_secret');
-        console.log("Decoded token:", decoded);
-        // Attach extracted user information to request
-        req.user = decoded;
-        next();
-    }
-    // Report error if user token not valid
-    catch (error) {
-        console.error("Error verifying token:", error.message);
-        res.status(401).json({error: 'Session expired. Please login to continue'});
-    }
-};
-
 // Export registration and login router for use
-module.exports = {router, authenticatedUser};
+module.exports = router;

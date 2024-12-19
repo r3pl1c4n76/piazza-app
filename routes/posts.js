@@ -1,47 +1,34 @@
 // Import libraries
 const express = require('express');
 const Post = require('../models/Post');
-const {authenticatedUser} = require('./auth');
+
+// Import interaction-specific middleware
+const authenticateUser = require('./auth');
+const validatePostCreate = require('../middleware/validatePostCreate');
+const validatePostUpdate = require('../middleware/validatePostUpdate');
+const verifyPostID = require('../middleware/verifyPostID');
+const verifyPostOwner = require('../middleware/verifyPostOwner');
+const verifyPostStatus = require('../middleware/verifyPostStatus');
 
 // Create router object to define routes
 const router = express.Router();
 
-// Middleware to authenticate user for all post interactions
-router.use(authenticatedUser);
+// Set middleware for authentication users for all interactions
+router.use(authenticateUser);
 
-// Validate post fields
-const validatePostFields = (fields) => {
-    const errors = [];
-    if (!fields.title) {
-        errors.push('Title cannot be empty');
+///////////////////////////////////// 5. Prevent post owner interactions
+const preventOwnerInteract = (req, res, next) => {
+    if (req.post.owner === req.user.username) {
+        return res.status(403).json({ error: "Post owner cannot like or dislike their own post" });
     }
-    if (!fields.topics || !Array.isArray(fields.topics) || fields.topics.length === 0) {
-        errors.push("At least one topic is required.");
-    } else if (!fields.topics.every(topic => ['Politics', 'Health', 'Sport', 'Tech'].includes(topic))) {
-        errors.push("Permitted topics are Politics, Health, Sport, or Tech.");
-    }
-    if (!fields.body) {
-        errors.push('Post content cannot be empty');
-    }
-    if (!fields.expirationTime) {
-        errors.push('Expiration time must be specified');
-    }
-    if (errors.length > 0) {
-        return errors;
-    }
-}
+    next();
+};
 
 // Create a new post
-router.post('/create', async (req, res) => {
-    // Validate post fields
-    const errors = validatePostFields(req.body);
-    // If errors exist, return all error responses
-    if (errors.length > 0) {
-        return res.status(400).json({errors});
-    }
+router.post('/create', validatePostCreate, async (req, res) => {
     try {
         // Extract post info from user input and username from token
-        const{title, topics, body, expirationTime} = req.body;
+        const {title, topics, body, expirationTime} = req.body;
         // Create new post
         const post = new Post({
             title,
@@ -55,37 +42,20 @@ router.post('/create', async (req, res) => {
         // Confirm successful save of new post
         res.status(201).json({message: 'Post created successfully', post});
     }
+    // Report error if post creation fails
     catch (error) {
         res.status(500).json({error: 'Error creating post'});
     }
 });
 
-// Update post by ID - post owner only
-router.put('/:id', async (req, res) => {
-    // Validate post fields
-    const errors = validatePostFields(req.body);
-    // If errors exist, return all error responses
-    if (errors.length > 0) {
-        return res.status(400).json({ errors });
-    }
+// Update post by ID - post owner only, post content validation
+router.put('/:id', verifyPostID, validatePostUpdate, verifyPostOwner, async (req, res) => {
     // Extract post info from user input
     const {title, topics, body, expirationTime} = req.body;
     try {
-        const updatedPost = await Post.findByIdAndUpdate(
-            req.params.id,
-            {title, topics, body, expirationTime},
-            {new: true}
-        );
-        // Check if post exists
-        if (!updatedPost) {
-            return res.status(404).json({error: 'Post not found'});
-        }
-        // Check if user is post owner
-        if (updatedPost.owner !== req.user.username) {
-            return res.status(403).json({error: 'Only the post owner can update the post'});
-        }
-        // Save updated post
-        await updatedPost.save();
+        const updatedPost = req.body;
+        const post = Object.assign(req.post, updatedPost);
+        await post.save();
         // Confirm successful update of post
         res.status(200).json({message: 'Post updated successfully', updatedPost});
     }
@@ -95,16 +65,11 @@ router.put('/:id', async (req, res) => {
 });
 
 // Delete post by ID - post owner only
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', verifyPostID, verifyPostOwner, async (req, res) => {
     try {
-        const post = await Post.findById(req.params.id);
-        if (!post) {
-            return res.status(404).json({error: 'Post not found'});
-        }
-        if (post.owner !== req.user.username) {
-            return res.status(403).json({error: 'Only the post owner can delete the post'});
-        }
-        await post.remove();
+        // Delete post
+        await req.post.remove();
+        // Confirm successful deletion of post
         res.status(200).json({message: 'Post deleted successfully'});
     }
     catch (error) {
