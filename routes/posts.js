@@ -1,6 +1,7 @@
 // Import libraries
 const express = require('express');
 const Post = require('../models/Post');
+const Interaction = require('../models/Interactions');
 
 // Import interaction-specific middleware
 const authenticateUser = require('./auth');
@@ -40,7 +41,7 @@ router.post('/create', validatePostCreate, async (req, res) => {
     }
 });
 
-// Update post by ID - post owner only, post content validation
+// Update post by ID - post owner only, validate content
 router.put('/:id', verifyPostID, validatePostUpdate, verifyPostOwner, async (req, res) => {
     // Extract post info from user input
     const {title, topics, body, expirationTime} = req.body;
@@ -107,12 +108,23 @@ router.post('/:id/like', verifyPostID, verifyPostStatus, async (req, res) => {
         // Prevent post owner from liking their own post
         if (post.owner === req.user.username) {
             return res.status(403).json({ error: 'Post owner cannot like their own post' });
+        };
+        const existingInteraction = await Interaction.findOne({
+            postID: post._id, 
+            user: req.user.username, 
+            type: 'Like' });
+        if (existingInteraction) {
+            return res.status(400).json({ error: 'You have already liked this post' });
         }
         // Increment likes count
         req.post.likes += 1;
-        await req.post.save();
+        await Interaction.create({
+            postID: post._id,
+            type: 'Like',
+            user: req.user.username
+        });
         // Confirm successful like
-        res.status(200).json({ message: 'Post liked successfully', post: req.post });
+        res.status(200).json({ message: 'Post liked', post: req.post });
     } 
     // Report error if post like fails
     catch (error) {
@@ -127,13 +139,25 @@ router.post('/:id/dislike', verifyPostID, verifyPostStatus, async (req, res) => 
         const post = req.post;
         // Prevent post owner from disliking their own post
         if (post.owner === req.user.username) {
-            return res.status(403).json({ error: 'Post owner cannot dislike their own post' });
+            return res.status(403).json({error: 'Post owner cannot dislike their own post'});
+        }
+        const existingInteraction = await Interaction.findOne({
+            postID: post._id, 
+            user: req.user.username, 
+            type: 'Dislike'
+        });
+        if (existingInteraction) {
+            return res.status(400).json({error: 'You have already disliked this post'});
         }
         // Increment dislikes count
         req.post.dislikes += 1;
-        await req.post.save();
+        await Interaction.create({
+            postID: post._id,
+            type: 'Dislike',
+            user: req.user.username
+        });
         // Confirm successful dislike
-        res.status(200).json({ message: 'Post disliked successfully', post: req.post });
+        res.status(200).json({ message: 'Post disliked', post: req.post });
     } 
     // Report error if post dislike fails
     catch (error) {
@@ -144,15 +168,20 @@ router.post('/:id/dislike', verifyPostID, verifyPostStatus, async (req, res) => 
 // Comment on a post
 router.post('/:id/comment', verifyPostID, verifyPostStatus, async (req, res) => {
     try {
-        const { comment } = req.body;
+        const {comment} = req.body;
         if (!comment) {
             return res.status(400).json({ error: 'Comment cannot be empty' });
         }
-        req.post.comments.push({ user: req.user.username, comment });
-        await req.post.save();
-        res.status(201).json({ message: 'Comment added successfully', post: req.post });
+        req.post.comments.push({user: req.user.username, comment});
+        await Interaction.create({
+            postID: req.post._id,
+            type: 'Comment',
+            user: req.user.username,
+            content: comment
+        });
+        res.status(201).json({message: 'Comment added', post: req.post});
     } catch (error) {
-        res.status(500).json({ error: 'Error adding comment' });
+        res.status(500).json({error: 'Error adding comment'});
     }
 });
 
