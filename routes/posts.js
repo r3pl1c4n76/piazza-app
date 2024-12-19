@@ -9,18 +9,39 @@ const router = express.Router();
 // Middleware to authenticate user for all post interactions
 router.use(authenticatedUser);
 
+// Validate post fields
+const validatePostFields = (fields) => {
+    const errors = [];
+    if (!fields.title) {
+        errors.push('Title cannot be empty');
+    }
+    if (!fields.topics || !Array.isArray(fields.topics) || fields.topics.length === 0) {
+        errors.push("At least one topic is required.");
+    } else if (!fields.topics.every(topic => ['Politics', 'Health', 'Sport', 'Tech'].includes(topic))) {
+        errors.push("Permitted topics are Politics, Health, Sport, or Tech.");
+    }
+    if (!fields.body) {
+        errors.push('Post content cannot be empty');
+    }
+    if (!fields.expirationTime) {
+        errors.push('Expiration time must be specified');
+    }
+    if (errors.length > 0) {
+        return errors;
+    }
+}
+
 // Create a new post
 router.post('/create', async (req, res) => {
+    // Validate post fields
+    const errors = validatePostFields(req.body);
+    // If errors exist, return all error responses
+    if (errors.length > 0) {
+        return res.status(400).json({errors});
+    }
     try {
-        console.log("Request body: ", req.body); // Debugging
-        console.log("Authenticated user: ", req.user); // Debugging
         // Extract post info from user input and username from token
         const{title, topics, body, expirationTime} = req.body;
-
-        if (!title || !topics || !body || !expirationTime) {
-            return res.status(400).json({ error: "Missing required fields" });
-        } // Debugging
-
         // Create new post
         const post = new Post({
             title,
@@ -29,7 +50,7 @@ router.post('/create', async (req, res) => {
             expirationTime,
             owner: req.user.username
         });
-        // Save new post to database
+        // Save new post
         await post.save();
         // Confirm successful save of new post
         res.status(201).json({message: 'Post created successfully', post});
@@ -39,22 +60,33 @@ router.post('/create', async (req, res) => {
     }
 });
 
-// Update post by ID
+// Update post by ID - post owner only
 router.put('/:id', async (req, res) => {
-    const {title, topics, body, expirationTime} = req.body;
-    // Check for missing and non-empty fields
-    if (title === "" || topics === "" || body === "" || expirationTime === "") {
-        return res.status(400).json({error: 'Fields must not be empty'});
+    // Validate post fields
+    const errors = validatePostFields(req.body);
+    // If errors exist, return all error responses
+    if (errors.length > 0) {
+        return res.status(400).json({ errors });
     }
+    // Extract post info from user input
+    const {title, topics, body, expirationTime} = req.body;
     try {
         const updatedPost = await Post.findByIdAndUpdate(
             req.params.id,
             {title, topics, body, expirationTime},
             {new: true}
         );
+        // Check if post exists
         if (!updatedPost) {
             return res.status(404).json({error: 'Post not found'});
         }
+        // Check if user is post owner
+        if (updatedPost.owner !== req.user.username) {
+            return res.status(403).json({error: 'Only the post owner can update the post'});
+        }
+        // Save updated post
+        await updatedPost.save();
+        // Confirm successful update of post
         res.status(200).json({message: 'Post updated successfully', updatedPost});
     }
     catch (error) {
@@ -62,7 +94,23 @@ router.put('/:id', async (req, res) => {
     }
 });
 
-// Delete post by ID
+// Delete post by ID - post owner only
+router.delete('/:id', async (req, res) => {
+    try {
+        const post = await Post.findById(req.params.id);
+        if (!post) {
+            return res.status(404).json({error: 'Post not found'});
+        }
+        if (post.owner !== req.user.username) {
+            return res.status(403).json({error: 'Only the post owner can delete the post'});
+        }
+        await post.remove();
+        res.status(200).json({message: 'Post deleted successfully'});
+    }
+    catch (error) {
+        res.status(500).json({error: 'Error deleting post'});
+    }
+});
 
 // Retrieve all posts
 router.get('/all', async (req, res) => {
