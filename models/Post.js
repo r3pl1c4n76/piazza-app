@@ -21,19 +21,9 @@ const PostSchema = new mongoose.Schema({
         default: 'Live' 
     },
     owner: {type: String, required: true},
-    likes: {
-        user: string,
-        type: Number, default: 0},
-    dislikes: {
-        user: string,
-        type: Number, default: 0},
-    comments: [
-        {
-            user: String,
-            comment: String,
-            timestamp: {type: Date, default: Date.now}
-        }
-    ]
+    likes: {type: Number, default: 0},
+    dislikes: {type: Number, default: 0},
+    commentsCount: {type: Number, default: 0}
 });
 
 // Update post status based on expirationTime
