@@ -21,8 +21,12 @@ const PostSchema = new mongoose.Schema({
         default: 'Live' 
     },
     owner: {type: String, required: true},
-    likes: {type: Number, default: 0},
-    dislikes: {type: Number, default: 0},
+    likes: {
+        user: string,
+        type: Number, default: 0},
+    dislikes: {
+        user: string,
+        type: Number, default: 0},
     comments: [
         {
             user: String,
