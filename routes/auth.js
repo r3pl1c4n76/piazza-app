@@ -19,7 +19,6 @@ router.post(
         check('email', 'A valid email address is required').isEmail(),
         check('password', 'Your password must be at least 6 characters').isLength({min: 6})
     ],
-
     // Validate registration input
     async (req, res) => {
         const errors = validationResult(req);
@@ -27,10 +26,8 @@ router.post(
         if (!errors.isEmpty()) {
             return res.status(400).json({errors: errors.array()});
         }
-
         // Extract username and password from request
         const {username, email, password} = req.body;
-
         // Create new User record
         try {
             // Create hashed user password
@@ -42,7 +39,6 @@ router.post(
             // Confirm successful save of new user
             res.status(201).json({message: 'User registered successfully'});
         }
-
         // Report unsucessful save or error creating new User record
         catch (error) {
             res.status(500).json({error: 'Error registering user'});
@@ -65,10 +61,8 @@ router.post(
         if (!errors.isEmpty()) {
             return res.status(400).json({errors: errors.array()});
         }
-
         // Extract username and password from request
         const {username, password} = req.body;
-
         // Check database for combined username and password
         try {
             // Check database for presence of username
@@ -83,13 +77,11 @@ router.post(
             if (!isMatch) {
                 return res.status(400).json({error: 'Invalid password'});
             }
-        
         // If username and pasword validated, generate JWT token with user ID
         const token = jwt.sign({id: user._id, username: user.username}, 'your_jwt_secret', {expiresIn: '1h'});
         // Return JWT token
         res.status(200).json({message: 'Login successful', token});
         }
-
         // If login credentials invalid, report error
         catch (error) {
             res.status(500).json({error: 'Error logging in'});

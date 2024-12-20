@@ -4,7 +4,8 @@ const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
 
 // Import routes
-const {router: authRoutes, authenticatedUser} = require('./routes/auth');
+const authRoutes = require('./routes/auth');
+const authenticateUser = require('./middleware/authenticateUser');
 const postRoutes = require('./routes/posts');
 
 // Initialise app

@@ -1,35 +1,33 @@
 // Import Post model
-const Post = require('../models/Post');
+const PostUpdate = require('../models/Post');
 
 // Validate user input for post update
-const validateUpdatePost = (req, res, next) => {
+const validatePostUpdate = (req, res, next) => {
     // Retrieve updated fields from request body
-    const { title, topics, body, expirationTime } = req.body;
+    const {title, topics, body, expirationTime } = req.body;
     // Initialise error array
-    const errors = [];
+    const errors = Array ();
     // Retrieve enum values for topics from the Post schema
-    const allowedTopics = Post.schema.path('topics').caster.enumValues;
+    const allowedTopics = PostUpdate.schema.path('topics').caster.enumValues;
     // Validate user input only for updated fields
-    if (title !== undefined) {
-        if (!title.trim()) {
-            errors.push('Title cannot be empty');
-        }
+    if (title !== undefined && !title.trim()) {
+        errors.push("Title cannot be em pty");
     }
     if (topics !== undefined) {
         if (!Array.isArray(topics) || topics.length === 0) {
-            errors.push('At least one topic is required');
+            errors.push("At least one topic is required");
         } else if (!topics.every(topic => allowedTopics.includes(topic))) {
-            errors.push(`Permitted topics are ${allowedTopics.join(', ')}`);
+            errors.push("Permitted topics are ${allowedTopics.join(', ')}");
         }
     }
     if (body !== undefined) {
         if (!body.trim()) {
-            errors.push('Post content cannot be empty');
+            errors.push("Post content cannot be empty");
         }
     }
     if (expirationTime !== undefined) {
         if (!expirationTime.trim()) {
-            errors.push('Expiration time must be specified');
+            errors.push("Expiration time must be specified");
         }
     }
     // Return errors if any
@@ -40,4 +38,4 @@ const validateUpdatePost = (req, res, next) => {
 };
 
 // Export post update validation for use
-module.exports = validateUpdatePost;
+module.exports = validatePostUpdate;
