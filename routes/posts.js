@@ -145,16 +145,22 @@ router.post('/:id/dislike', verifyPostID, verifyPostStatus, async (req, res) => 
 router.post('/:id/comment', verifyPostID, verifyPostStatus, async (req, res) => {
     try {
         const {comment} = req.body;
+        // Check if comment is empty
         if (!comment) {
             return res.status(400).json({ error: 'Comment cannot be empty' });
         }
-        req.post.comments.push({user: req.user.username, comment});
-        await Interaction.create({
+        // Create new comment
+        const interaction = await Interaction.create({
             postID: req.post._id,
             type: 'Comment',
             user: req.user.username,
             content: comment
         });
+        // Increment comments count
+        req.post.commentsCount += 1;
+        // Save post with new comment
+        await req.post.save();
+        // Confirm successful comment
         res.status(201).json({message: 'Comment added', post: req.post});
     } catch (error) {
         res.status(500).json({error: 'Error adding comment'});
