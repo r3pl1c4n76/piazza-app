@@ -186,9 +186,9 @@ router.get('/:id/comments', verifyPostID, async (req, res) => {
 router.get('/all', async (req, res) => {
     try {
         // Find all posts
-        const posts = await Post.find();
+        const posts = await Post.find().sort({timestamp: -1});
         // Confirm successful retrieval
-        res.status(200).json(posts);
+        res.status(200).json({message: 'Most recent posts: ', posts});
     }
     catch (error) {
         res.status(500).json({error: 'Error retrieving posts'});
