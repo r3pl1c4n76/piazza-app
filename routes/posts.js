@@ -94,6 +94,9 @@ router.post('/:id/like', verifyPostID, verifyPostStatus, async (req, res) => {
         }
         // Increment likes count
         req.post.likes += 1;
+        await post.save();
+
+        // Create new interaction record
         await Interaction.create({
             postID: post._id,
             type: 'Like',
@@ -127,6 +130,9 @@ router.post('/:id/dislike', verifyPostID, verifyPostStatus, async (req, res) => 
         }
         // Increment dislikes count
         req.post.dislikes += 1;
+        await post.save();
+
+        // Create new interaction record
         await Interaction.create({
             postID: post._id,
             type: 'Dislike',
@@ -154,7 +160,7 @@ router.post('/:id/comment', verifyPostID, verifyPostStatus, async (req, res) => 
             postID: req.post._id,
             type: 'Comment',
             user: req.user.username,
-            content: comment
+            comment: comment
         });
         // Increment comments count
         req.post.commentsCount += 1;
@@ -171,11 +177,16 @@ router.post('/:id/comment', verifyPostID, verifyPostStatus, async (req, res) => 
 router.get('/:id/comments', verifyPostID, async (req, res) => {
     try {
         const post = req.post;
+        // Retrieve comments for post
+        const comments = await Interaction.find({
+            postID: post._id, 
+            type: 'Comment' })
+            .select('user comment timestamp');
         // Check if post has comments
-        if (!post.comments || post.comments.length === 0) {
+        if (!comments || comments.length === 0) {
             return res.status(404).json({ error: 'This post has no comments' });
         }
-        res.status(200).json({message: "Comments: ", comments: post.comments});
+        res.status(200).json({message: "Comments: ", comments});
     } catch (error) {
         res.status(500).json({error: 'Error retrieving comments'});
     }
@@ -229,7 +240,26 @@ router.get('/user/:username', async (req, res) => {
     }
 });
 
-// 2.4 Retrieve live posts with most interactions by topic
+// 2.4 Retrieve all posts by topic, most recent first
+router.get('/topic/:topic', async (req, res) => {
+    try {
+        const {topic} = req.params;
+        // Validate the topic
+        if (!validTopics.includes(topic)) {
+            return res.status(400).json({error: 'Invalid topic. Choose from Politics, Health, Sport, or Tech.'});
+        }
+        // Find posts by topic
+        const postsByTopic = await Post.find({topics: topic}).sort({timestamp: -1});
+        // Confirm successful retrieval
+        res.status(200).json({message: `Posts for topic: ${topic}`, postsByTopic});
+    }
+    // Report error if post retrieval fails
+    catch (error) {
+        res.status(500).json({error: 'Error retrieving posts'});
+    }
+});
+
+// 2.5 Retrieve live post with most interactions by topic
 router.get('/:topic/popular/live', async (req, res) => {
     try {
         const {topic} = req.params;
@@ -239,12 +269,12 @@ router.get('/:topic/popular/live', async (req, res) => {
         }
         // Retrieve post with most interactions for topic
         const mostPopularPosts = await Post.aggregate([
-            { $match: { topics: topic, status: 'Live' } },
-            { $addFields: { totalInteractions: { $add: ["$likes", "$dislikes", "$comments"] } } },
+            {$match: {topics: topic, status: 'Live'}},
+            {$addFields: {totalInteractions: {$add: ["$likes", "$dislikes", "$commentsCount"]}}},
             // Sort posts based on total interactions
-            { $sort: { totalInteractions: -1 } },
-            // Show top 5 posts
-            { $limit: 5 }
+            {$sort: {totalInteractions: -1}},
+            // Show top post
+            {$limit: 1}
         ]);
         // Return error if no posts found for topic
         if (!mostPopularPosts.length) {
@@ -252,17 +282,17 @@ router.get('/:topic/popular/live', async (req, res) => {
         }
         // Confirm successful retrieval
         res.status(200).json({
-            message: `Most popular posts for topic: ${topic}`,
+            message: `Most popular post for topic: ${topic}`,
             post: mostPopularPosts[0],
         });
     } 
     // Report error if post retrieval fails
     catch (error) {
-        res.status(500).json({error: 'Error retrieving the most popular posts'});
+        res.status(500).json({error: 'Error retrieving the most popular post'});
     }
 });
 
-// 2.5 Retrieve expired posts with most interactions by topic
+// 2.6 Retrieve expired post with most interactions by topic
 router.get('/:topic/popular/expired', async (req, res) => {
     try {
         const {topic} = req.params;
@@ -272,12 +302,12 @@ router.get('/:topic/popular/expired', async (req, res) => {
         }
         // Retrieve post with most interactions for topic
         const mostPopularPosts = await Post.aggregate([
-            { $match: { topics: topic, status: 'Expired' } },
-            { $addFields: { totalInteractions: { $add: ["$likes", "$dislikes", "$comments"] } } },
+            {$match: {topics: topic, status: 'Expired'}},
+            {$addFields: {totalInteractions: {$add: ["$likes", "$dislikes", "$comments"]}}},
             // Sort posts based on total interactions
-            { $sort: { totalInteractions: -1 } },
-            // Show top 5 posts
-            { $limit: 5 }
+            {$sort: {totalInteractions: -1}},
+            // Show top post
+            {$limit: 1}
         ]);
         // Return error if no posts found for topic
         if (!mostPopularPosts.length) {
@@ -285,13 +315,13 @@ router.get('/:topic/popular/expired', async (req, res) => {
         }
         // Confirm successful retrieval
         res.status(200).json({
-            message: `Most popular posts for topic: ${topic}`,
+            message: `Most popular post for topic: ${topic}`,
             post: mostPopularPosts[0],
         });
     } 
     // Report error if post retrieval fails
     catch (error) {
-        res.status(500).json({error: 'Error retrieving the most popular posts'});
+        res.status(500).json({error: 'Error retrieving the most popular post'});
     }
 });
 
